@@ -1,0 +1,685 @@
+{% extends "base.html" %}
+
+{% block title %}Alat Praktikum - Praktikum Manager{% endblock %}
+{% block page %}tools{% endblock %}
+
+{% block head_extra %}
+    <!-- docx.js untuk export Word, html2pdf.js untuk export PDF -->
+    <script src="https://cdn.jsdelivr.net/npm/docx@8.2.2/build/index.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<!-- ===================== KALKULATOR ===================== -->
+<section id="tool-calculator" class="space-y-6">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+            <i class="fa-solid fa-calculator text-brand-500"></i> Kalkulator Praktikum Elektro & Teknik
+        </h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Hitung error hasil percobaan lab dan total resistansi komponen. Perhitungan dijalankan oleh server Python.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Kalkulator 1: persentase error -->
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
+            <div class="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-700">
+                <div class="p-2.5 bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-400 rounded-xl">
+                    <i class="fa-solid fa-percent text-lg"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-slate-900 dark:text-white text-lg">Hitung % Error Praktikum</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Penyimpangan data ukur terhadap teori</p>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Nilai Teori / Acuan (a)</label>
+                    <input type="number" step="any" id="calc-error-theory" placeholder="Contoh: 12.0" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Nilai Ukur Praktikum (b)</label>
+                    <input type="number" step="any" id="calc-error-measured" placeholder="Contoh: 11.75" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                </div>
+                <button onclick="calculateError()" class="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl shadow-md transition-all">
+                    Hitung Persentase Error
+                </button>
+            </div>
+
+            <div id="error-calc-result" class="hidden p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 space-y-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-semibold text-slate-500">Persentase Error:</span>
+                    <span id="res-error-percent" class="text-xl font-extrabold text-rose-600 dark:text-rose-400">0%</span>
+                </div>
+                <div class="text-xs text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700 font-mono" id="res-error-formula"></div>
+            </div>
+        </div>
+
+        <!-- Kalkulator 2: resistansi total -->
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
+            <div class="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-700">
+                <div class="p-2.5 bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400 rounded-xl">
+                    <i class="fa-solid fa-wave-square text-lg"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-slate-900 dark:text-white text-lg">Kalkulator Resistansi Total</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Kombinasi resistor seri atau paralel</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-900 rounded-xl">
+                <button id="btn-res-series" onclick="setResistorMode('series')" class="py-2 text-xs font-bold rounded-lg bg-white dark:bg-slate-800 shadow text-brand-600 dark:text-brand-400">
+                    R. Seri (R1 + R2 + ...)
+                </button>
+                <button id="btn-res-parallel" onclick="setResistorMode('parallel')" class="py-2 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
+                    R. Paralel (1/R_total)
+                </button>
+            </div>
+
+            <div id="resistor-inputs-list" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+
+            <div class="flex gap-2">
+                <button onclick="addResistorInput()" class="flex-1 py-2 text-xs font-semibold border border-dashed border-slate-300 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700">
+                    <i class="fa-solid fa-plus"></i> Tambah Resistor
+                </button>
+                <button onclick="calculateResistance()" class="flex-1 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl shadow">
+                    Hitung Total
+                </button>
+            </div>
+
+            <div id="resistor-calc-result" class="hidden p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 space-y-1">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-semibold text-slate-500">Resistansi Ekuivalen (R_total):</span>
+                    <span id="res-total-val" class="text-xl font-extrabold text-amber-600 dark:text-amber-400">0 Ω</span>
+                </div>
+                <div id="res-total-units" class="text-xs text-slate-500 text-right">0 kΩ | 0 MΩ</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== PENYUSUN LAMPIRAN ===================== -->
+<section id="tool-appendix" class="hidden space-y-6">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+                <i class="fa-solid fa-file-word text-blue-600"></i> Penyusun Lampiran Praktikum Otomatis
+            </h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Format otomatis foto dokumentasi praktikum ke layout tabel A4 presisi sesuai standar laporan.</p>
+        </div>
+        <div class="flex flex-wrap gap-2 w-full md:w-auto">
+            <button onclick="exportToWord()" class="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs md:text-sm rounded-xl shadow transition-all">
+                <i class="fa-solid fa-file-word"></i> Export .DOCX
+            </button>
+            <button onclick="exportToPDF()" class="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs md:text-sm rounded-xl shadow transition-all">
+                <i class="fa-solid fa-file-pdf"></i> Export .PDF
+            </button>
+            <button onclick="window.print()" class="flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-2.5 bg-slate-700 hover:bg-slate-800 text-white font-medium text-xs md:text-sm rounded-xl transition-all">
+                <i class="fa-solid fa-print"></i> Print
+            </button>
+        </div>
+    </div>
+
+    <div class="bg-blue-50 dark:bg-slate-800/80 border border-blue-200 dark:border-blue-900/50 p-4 rounded-xl text-xs text-slate-700 dark:text-slate-300 space-y-1">
+        <p class="font-bold text-blue-800 dark:text-blue-300 flex items-center gap-2">
+            <i class="fa-solid fa-circle-info"></i> Standar Format Laporan Praktikum
+        </p>
+        <p>• Margin: kiri 2,5 cm, kanan 2 cm, atas 2 cm, bawah 2 cm | Font: Times New Roman</p>
+        <p>• Gambar otomatis di-crop rasio 4:3 (ukuran 5,33 cm x 4 cm) | Baris sisa foto otomatis rata tengah.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- Panel input -->
+        <div class="lg:col-span-5 space-y-4">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
+                <h3 class="font-bold text-slate-900 dark:text-white text-base border-b border-slate-100 dark:border-slate-700 pb-2">
+                    1. Judul Bab Laporan
+                </h3>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Judul Bab (bisa diedit)</label>
+                    <input type="text" id="input-chapter-title" value="LAMPIRAN" oninput="renderAppendixPreview()" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-brand-500 outline-none">
+                </div>
+            </div>
+
+            <div id="appendix-tables-editor" class="space-y-4"></div>
+
+            <button onclick="addAppendixTableBlock()" class="w-full py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-bold text-sm rounded-2xl border border-dashed border-slate-300 dark:border-slate-500 flex items-center justify-center gap-2 transition-all">
+                <i class="fa-solid fa-plus-circle text-brand-500"></i> Tambah Tabel Gambar
+            </button>
+        </div>
+
+        <!-- Pratinjau A4 -->
+        <div class="lg:col-span-7 overflow-x-auto pb-6">
+            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <i class="fa-solid fa-eye"></i> Pratinjau A4
+            </div>
+
+            <div class="min-w-[210mm]">
+                <div id="printable-area" class="a4-preview-page">
+                    <h1 id="render-chapter-title" class="font-bold text-left uppercase mb-4" style="font-size: 14pt; font-family: 'Times New Roman', serif;">LAMPIRAN</h1>
+                    <div id="render-tables-container" class="space-y-6"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% raw %}
+<script>
+    /* =========================================================
+       Pemilih alat: dipilih dari sidebar lewat /praktikum?tab=...
+       ========================================================= */
+    function switchTool(tool) {
+        document.getElementById('tool-calculator').classList.toggle('hidden', tool !== 'calculator');
+        document.getElementById('tool-appendix').classList.toggle('hidden', tool !== 'appendix');
+    }
+
+    /* =========================================================
+       Kalkulator (perhitungan dilakukan oleh Flask di /api/...)
+       ========================================================= */
+    let resistorMode = 'series';
+    let resistorInputs = [100, 220, 330];
+
+    async function calculateError() {
+        const a = parseFloat(document.getElementById('calc-error-theory').value);
+        const b = parseFloat(document.getElementById('calc-error-measured').value);
+
+        if (isNaN(a) || isNaN(b)) {
+            showAlert('Input Tidak Valid', 'Masukkan nilai Teori (a) dan Nilai Ukur (b) berupa angka.');
+            return;
+        }
+
+        const res = await api('POST', '/api/error', { teori: a, ukur: b });
+        if (!res) return;
+
+        document.getElementById('error-calc-result').classList.remove('hidden');
+        document.getElementById('res-error-percent').innerText = `${res.persen.toFixed(2)}%`;
+        document.getElementById('res-error-formula').innerText = res.rumus;
+    }
+
+    function setResistorMode(mode) {
+        resistorMode = mode;
+        const btnSeries = document.getElementById('btn-res-series');
+        const btnParallel = document.getElementById('btn-res-parallel');
+        const on = 'py-2 text-xs font-bold rounded-lg bg-white dark:bg-slate-800 shadow text-brand-600 dark:text-brand-400';
+        const off = 'py-2 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200';
+
+        btnSeries.className = mode === 'series' ? on : off;
+        btnParallel.className = mode === 'parallel' ? on : off;
+        calculateResistance();
+    }
+
+    function renderResistorInputs() {
+        const container = document.getElementById('resistor-inputs-list');
+        container.innerHTML = '';
+
+        resistorInputs.forEach((val, idx) => {
+            const div = document.createElement('div');
+            div.className = 'flex items-center gap-2';
+            div.innerHTML = `
+                <span class="text-xs font-bold text-slate-400 w-8">R${idx + 1}</span>
+                <input type="number" step="any" value="${val}" onchange="resistorInputs[${idx}] = parseFloat(this.value) || 0"
+                       class="flex-1 px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Ohm (Ω)">
+                <button onclick="removeResistorInput(${idx})" class="text-slate-400 hover:text-rose-500 px-2 py-1 text-xs">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function addResistorInput() {
+        resistorInputs.push(100);
+        renderResistorInputs();
+        calculateResistance();
+    }
+
+    function removeResistorInput(idx) {
+        if (resistorInputs.length <= 1) return;
+        resistorInputs.splice(idx, 1);
+        renderResistorInputs();
+        calculateResistance();
+    }
+
+    async function calculateResistance() {
+        const res = await api('POST', '/api/resistansi', { mode: resistorMode, resistor: resistorInputs });
+        if (!res) return;
+
+        document.getElementById('resistor-calc-result').classList.remove('hidden');
+        document.getElementById('res-total-val').innerText = `${res.total.toFixed(2)} Ω`;
+        document.getElementById('res-total-units').innerText = `${res.kilo.toFixed(3)} kΩ | ${res.mega.toFixed(4)} MΩ`;
+    }
+
+    /* =========================================================
+       Penyusun lampiran (disimpan di localStorage browser)
+       ========================================================= */
+    const APPENDIX_KEY = 'lab_manager_appendix';
+
+    const PLACEHOLDER_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'><rect width='400' height='300' fill='%23cbd5e1'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='18' fill='%23475569'>Foto Praktikum</text></svg>";
+
+    let appendixTables = [
+        {
+            id: 1700000000000,
+            caption: 'Tabel 1.1 Dokumentasi Hasil Pengukuran Voltage dan Arus',
+            images: [
+                { id: 1700000000001, topCaption: 'Keterangan Atas 1', bottomCaption: 'Rangkaian Pengukuran V1', src: PLACEHOLDER_IMG },
+                { id: 1700000000002, topCaption: 'Keterangan Atas 2', bottomCaption: 'Multimeter Pengukuran I1', src: PLACEHOLDER_IMG },
+                { id: 1700000000003, topCaption: 'Keterangan Atas 3', bottomCaption: 'Oscilloscope Waveform', src: PLACEHOLDER_IMG }
+            ]
+        }
+    ];
+
+    // Mengembalikan true kalau berhasil disimpan
+    function saveAppendix() {
+        try {
+            localStorage.setItem(APPENDIX_KEY, JSON.stringify(appendixTables));
+            return true;
+        } catch (e) {
+            console.warn('Gagal menyimpan lampiran ke browser:', e);
+            return false;
+        }
+    }
+
+    function loadAppendix() {
+        try {
+            const saved = localStorage.getItem(APPENDIX_KEY);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length > 0) appendixTables = parsed;
+            }
+        } catch (e) {}
+    }
+
+    function initAppendixEditor() {
+        const container = document.getElementById('appendix-tables-editor');
+        container.innerHTML = '';
+
+        appendixTables.forEach((table, tIdx) => {
+            const block = document.createElement('div');
+            block.className = 'bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 space-y-4';
+
+            block.innerHTML = `
+                <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-700">
+                    <h4 class="font-bold text-sm text-slate-800 dark:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-table text-blue-500"></i> Tabel Gambar #${tIdx + 1}
+                    </h4>
+                    <button onclick="deleteAppendixTableBlock(${table.id})" class="text-xs text-rose-500 hover:text-rose-700 font-medium">
+                        <i class="fa-solid fa-trash-can"></i> Hapus Tabel
+                    </button>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Keterangan Tabel (judul di atas tabel)</label>
+                    <input type="text" value="${escapeHtml(table.caption)}" oninput="updateTableCaption(${table.id}, this.value)"
+                           class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-brand-500 outline-none">
+                </div>
+
+                <div class="space-y-3 pt-2">
+                    <label class="block text-xs font-bold text-slate-600 dark:text-slate-400">Daftar gambar dalam tabel ini:</label>
+                    ${table.images.map((img, iIdx) => `
+                        <div class="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-brand-600">Foto #${iIdx + 1}</span>
+                                <button onclick="deleteAppendixImage(${table.id}, ${img.id})" class="text-slate-400 hover:text-rose-500 text-xs">
+                                    <i class="fa-solid fa-xmark"></i> Hapus Foto
+                                </button>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <input type="text" value="${escapeHtml(img.topCaption)}" placeholder="Keterangan atas gambar" oninput="updateImageCaption(${table.id}, ${img.id}, 'topCaption', this.value)"
+                                       class="px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none">
+                                <input type="text" value="${escapeHtml(img.bottomCaption)}" placeholder="Keterangan bawah gambar" oninput="updateImageCaption(${table.id}, ${img.id}, 'bottomCaption', this.value)"
+                                       class="px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none">
+                            </div>
+
+                            <div class="flex items-center gap-3 pt-1">
+                                <div class="w-12 h-9 bg-slate-200 dark:bg-slate-700 rounded overflow-hidden flex-shrink-0">
+                                    <img src="${img.src}" class="w-full h-full object-cover">
+                                </div>
+                                <input type="file" accept="image/*" onchange="handleImageUpload(event, ${table.id}, ${img.id})"
+                                       class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100">
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <button onclick="addAppendixImage(${table.id})" class="w-full py-2 bg-brand-50 dark:bg-slate-700 hover:bg-brand-100 text-brand-700 dark:text-brand-300 font-semibold text-xs rounded-xl transition-all">
+                    + Tambah Gambar ke Tabel Ini
+                </button>
+            `;
+            container.appendChild(block);
+        });
+    }
+
+    function addAppendixTableBlock() {
+        const base = Date.now();
+        appendixTables.push({
+            id: base,
+            caption: `Tabel 1.${appendixTables.length + 1} Dokumentasi Hasil Praktikum`,
+            images: [
+                { id: base + 1, topCaption: 'Keterangan Atas', bottomCaption: 'Keterangan Bawah', src: PLACEHOLDER_IMG }
+            ]
+        });
+        saveAppendix();
+        initAppendixEditor();
+        renderAppendixPreview();
+    }
+
+    function deleteAppendixTableBlock(tableId) {
+        if (appendixTables.length <= 1) {
+            showAlert('Tidak Bisa Dihapus', 'Minimal harus ada 1 tabel lampiran.');
+            return;
+        }
+        appendixTables = appendixTables.filter(t => t.id !== tableId);
+        saveAppendix();
+        initAppendixEditor();
+        renderAppendixPreview();
+    }
+
+    function updateTableCaption(tableId, val) {
+        const table = appendixTables.find(t => t.id === tableId);
+        if (table) table.caption = val;
+        saveAppendix();
+        renderAppendixPreview();
+    }
+
+    function addAppendixImage(tableId) {
+        const table = appendixTables.find(t => t.id === tableId);
+        if (!table) return;
+        table.images.push({
+            id: Date.now(),
+            topCaption: `Keterangan Atas ${table.images.length + 1}`,
+            bottomCaption: `Keterangan Bawah ${table.images.length + 1}`,
+            src: PLACEHOLDER_IMG
+        });
+        saveAppendix();
+        initAppendixEditor();
+        renderAppendixPreview();
+    }
+
+    function deleteAppendixImage(tableId, imgId) {
+        const table = appendixTables.find(t => t.id === tableId);
+        if (!table) return;
+        table.images = table.images.filter(i => i.id !== imgId);
+        saveAppendix();
+        initAppendixEditor();
+        renderAppendixPreview();
+    }
+
+    function updateImageCaption(tableId, imgId, field, val) {
+        const table = appendixTables.find(t => t.id === tableId);
+        if (!table) return;
+        const img = table.images.find(i => i.id === imgId);
+        if (img) img[field] = val;
+        saveAppendix();
+        renderAppendixPreview();
+    }
+
+    /* ---------- Pengolahan gambar ---------- */
+
+    function readFileAsDataURL(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function loadImage(src) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = src;
+        });
+    }
+
+    // Gambar digambar ke kanvas dengan crop tengah (seperti object-fit: cover)
+    function drawCover(img, w, h) {
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+
+        const iw = img.naturalWidth || img.width || w;
+        const ih = img.naturalHeight || img.height || h;
+        const scale = Math.max(w / iw, h / ih);
+        const sw = w / scale;
+        const sh = h / scale;
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, (iw - sw) / 2, (ih - sh) / 2, sw, sh, 0, 0, w, h);
+        return canvas;
+    }
+
+    async function handleImageUpload(evt, tableId, imgId) {
+        const file = evt.target.files[0];
+        if (!file) return;
+
+        try {
+            const dataUrl = await readFileAsDataURL(file);
+            const img = await loadImage(dataUrl);
+            // Ukuran 800x600 (rasio 4:3) supaya hemat tempat penyimpanan browser
+            const src = drawCover(img, 800, 600).toDataURL('image/jpeg', 0.85);
+
+            const table = appendixTables.find(t => t.id === tableId);
+            const target = table ? table.images.find(i => i.id === imgId) : null;
+            if (!target) return;
+
+            target.src = src;
+            if (!saveAppendix()) {
+                showAlert('Penyimpanan Penuh', 'Foto tampil di pratinjau, tapi tidak bisa disimpan di browser karena ruangnya penuh. Export lampiran sebelum menutup halaman.');
+            }
+            initAppendixEditor();
+            renderAppendixPreview();
+        } catch (e) {
+            showAlert('Gagal Memuat Gambar', 'File tersebut tidak bisa dibaca sebagai gambar.');
+        }
+    }
+
+    /* ---------- Pratinjau A4 ---------- */
+
+    function renderAppendixPreview() {
+        const titleValue = document.getElementById('input-chapter-title').value;
+        document.getElementById('render-chapter-title').innerText = titleValue || 'LAMPIRAN';
+
+        const container = document.getElementById('render-tables-container');
+        container.innerHTML = '';
+
+        appendixTables.forEach(table => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'mb-6';
+
+            const captionEl = document.createElement('div');
+            captionEl.className = 'font-bold text-left mb-1.5';
+            captionEl.style.fontSize = '12pt';
+            captionEl.style.fontFamily = "'Times New Roman', serif";
+            captionEl.innerText = table.caption;
+            wrapper.appendChild(captionEl);
+
+            const imgs = table.images;
+            for (let i = 0; i < imgs.length; i += 3) {
+                const rowImgs = imgs.slice(i, i + 3);
+                const tableEl = document.createElement('table');
+                tableEl.className = 'appendix-table';
+                // Baris yang tidak penuh dibuat lebih sempit dan tetap rata tengah
+                tableEl.style.width = rowImgs.length === 1 ? '33.33%' : rowImgs.length === 2 ? '66.66%' : '100%';
+
+                const tr = document.createElement('tr');
+                rowImgs.forEach(img => {
+                    const td = document.createElement('td');
+                    td.style.width = (100 / rowImgs.length) + '%';
+                    td.innerHTML = `
+                        <div style="font-size: 12pt; font-family: 'Times New Roman', serif;" class="mb-1 font-normal text-black">${escapeHtml(img.topCaption)}</div>
+                        <div class="img-crop-container">
+                            <img src="${img.src}" alt="Gambar Praktikum">
+                        </div>
+                        <div style="font-size: 12pt; font-family: 'Times New Roman', serif;" class="mt-1 font-normal text-black">${escapeHtml(img.bottomCaption)}</div>
+                    `;
+                    tr.appendChild(td);
+                });
+
+                tableEl.appendChild(tr);
+                wrapper.appendChild(tableEl);
+            }
+
+            container.appendChild(wrapper);
+        });
+    }
+
+    /* ---------- Export PDF ---------- */
+
+    function exportToPDF() {
+        const source = document.getElementById('printable-area');
+
+        // Salinan tanpa padding: margin halaman diatur oleh html2pdf supaya
+        // tiap halaman PDF punya margin yang sama (tidak dobel dengan padding pratinjau)
+        const clone = source.cloneNode(true);
+        clone.removeAttribute('id');
+        clone.style.cssText = 'width:165mm; min-height:0; padding:0; margin:0; box-shadow:none; background:#fff; color:#000;';
+
+        const holder = document.createElement('div');
+        holder.style.cssText = 'position:fixed; left:-10000px; top:0;';
+        holder.appendChild(clone);
+        document.body.appendChild(holder);
+
+        const opt = {
+            margin: [20, 25, 20, 20],   // atas, kiri, bawah, kanan (mm)
+            filename: 'Lampiran_Praktikum.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['css', 'legacy'], avoid: 'table' }
+        };
+
+        html2pdf().set(opt).from(clone).save()
+            .then(() => holder.remove())
+            .catch(() => {
+                holder.remove();
+                showAlert('Export PDF Gagal', 'Periksa koneksi internet (library html2pdf dimuat dari CDN) lalu coba lagi.');
+            });
+    }
+
+    /* ---------- Export Word ---------- */
+
+    async function getImageBuffer(src) {
+        const img = await loadImage(src);
+        const canvas = drawCover(img, 800, 600);
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        return await blob.arrayBuffer();
+    }
+
+    async function exportToWord() {
+        if (typeof docx === 'undefined') {
+            showAlert('Library Belum Termuat', 'Library docx belum termuat. Periksa koneksi internet lalu muat ulang halaman.');
+            return;
+        }
+
+        const { Document, Packer, Paragraph, Table, TableRow, TableCell, WidthType, AlignmentType, TextRun, ImageRun } = docx;
+
+        // Lebar area tulis: 21 cm - 2,5 cm - 2 cm = 16,5 cm = 9355 dxa; dibagi 3 kolom
+        const COL_WIDTH = 3118;
+
+        const chapterTitle = document.getElementById('input-chapter-title').value || 'LAMPIRAN';
+        const children = [];
+
+        children.push(new Paragraph({
+            children: [new TextRun({ text: chapterTitle, bold: true, size: 28, font: 'Times New Roman' })],
+            alignment: AlignmentType.LEFT,
+            spacing: { after: 200 }
+        }));
+
+        try {
+            for (const tableData of appendixTables) {
+                children.push(new Paragraph({
+                    children: [new TextRun({ text: tableData.caption, bold: true, size: 24, font: 'Times New Roman' })],
+                    alignment: AlignmentType.LEFT,
+                    spacing: { before: 200, after: 100 }
+                }));
+
+                const imgs = tableData.images;
+                for (let i = 0; i < imgs.length; i += 3) {
+                    const rowImgs = imgs.slice(i, i + 3);
+                    const cells = [];
+
+                    for (const img of rowImgs) {
+                        const buffer = await getImageBuffer(img.src);
+
+                        cells.push(new TableCell({
+                            width: { size: COL_WIDTH, type: WidthType.DXA },
+                            margins: { top: 60, bottom: 60, left: 40, right: 40 },
+                            children: [
+                                new Paragraph({
+                                    children: [new TextRun({ text: img.topCaption, size: 24, font: 'Times New Roman' })],
+                                    alignment: AlignmentType.CENTER
+                                }),
+                                new Paragraph({
+                                    children: [new ImageRun({
+                                        data: buffer,
+                                        type: 'png',
+                                        transformation: { width: 201, height: 151 }   // 5,33 cm x 4 cm
+                                    })],
+                                    alignment: AlignmentType.CENTER,
+                                    spacing: { before: 80, after: 80 }
+                                }),
+                                new Paragraph({
+                                    children: [new TextRun({ text: img.bottomCaption, size: 24, font: 'Times New Roman' })],
+                                    alignment: AlignmentType.CENTER
+                                })
+                            ]
+                        }));
+                    }
+
+                    children.push(new Table({
+                        rows: [new TableRow({ children: cells })],
+                        width: { size: COL_WIDTH * rowImgs.length, type: WidthType.DXA },
+                        columnWidths: rowImgs.map(() => COL_WIDTH),
+                        alignment: AlignmentType.CENTER
+                    }));
+                    children.push(new Paragraph({ text: '', spacing: { after: 100 } }));
+                }
+            }
+
+            const doc = new Document({
+                sections: [{
+                    properties: {
+                        page: {
+                            margin: { top: 1134, bottom: 1134, left: 1417, right: 1134 }   // 2 / 2 / 2,5 / 2 cm
+                        }
+                    },
+                    children
+                }]
+            });
+
+            const blob = await Packer.toBlob(doc);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Lampiran_Praktikum.docx';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+        } catch (e) {
+            console.error(e);
+            showAlert('Export Word Gagal', 'Terjadi kesalahan saat membuat file .docx. Buka konsol browser (F12) untuk melihat detailnya.');
+        }
+    }
+
+    /* =========================================================
+       Mulai
+       ========================================================= */
+    document.addEventListener('DOMContentLoaded', () => {
+        switchTool(new URLSearchParams(location.search).get('tab') === 'appendix' ? 'appendix' : 'calculator');
+        renderResistorInputs();
+        loadAppendix();
+        initAppendixEditor();
+        renderAppendixPreview();
+    });
+</script>
+{% endraw %}
+{% endblock %}

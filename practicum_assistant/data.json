@@ -1,0 +1,116 @@
+{
+  "courses": [
+    {
+      "id": 1,
+      "name": "Rangkaian Listrik",
+      "icon": "fa-bolt",
+      "color": "text-amber-500",
+      "modules": [
+        {
+          "id": 101,
+          "title": "Modul 1: Hukum Ohm dan Kirchhoff",
+          "tasks": [
+            {
+              "id": 1001,
+              "text": "Laporan Pendahuluan",
+              "done": false
+            },
+            {
+              "id": 1002,
+              "text": "Praktikum",
+              "done": false
+            },
+            {
+              "id": 1003,
+              "text": "Laporan Sementara",
+              "done": false
+            },
+            {
+              "id": 1004,
+              "text": "Laporan Resmi",
+              "done": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Elektronika Analog",
+      "icon": "fa-microchip",
+      "color": "text-emerald-500",
+      "modules": [
+        {
+          "id": 201,
+          "title": "Modul 1: Diode dan Penyearah Gelombang",
+          "tasks": [
+            {
+              "id": 2001,
+              "text": "Praktikum",
+              "done": false
+            },
+            {
+              "id": 2002,
+              "text": "Menyusun Data Hasil Praktikum",
+              "done": false
+            },
+            {
+              "id": 2003,
+              "text": "Laporan Praktikum",
+              "done": false
+            },
+            {
+              "id": 2004,
+              "text": "Melampirkan Lampiran",
+              "done": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Algoritma dan Pemrograman",
+      "icon": "fa-code",
+      "color": "text-indigo-500",
+      "modules": [
+        {
+          "id": 301,
+          "title": "Modul 1: Dasar Pemrograman & Algoritma",
+          "tasks": [
+            {
+              "id": 3001,
+              "text": "Membuat Materi",
+              "done": false
+            },
+            {
+              "id": 3002,
+              "text": "Program Scratch",
+              "done": false
+            },
+            {
+              "id": 3003,
+              "text": "Flowchart",
+              "done": false
+            },
+            {
+              "id": 3004,
+              "text": "Program Python",
+              "done": false
+            },
+            {
+              "id": 3005,
+              "text": "Take Video",
+              "done": false
+            },
+            {
+              "id": 3006,
+              "text": "Upload Youtube",
+              "done": false
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
