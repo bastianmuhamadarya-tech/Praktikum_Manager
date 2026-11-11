@@ -172,6 +172,11 @@ def praktikum():
     return render_template("praktikum.html")
 
 
+@app.route("/lampiran-analog")
+def lampiran_analog():
+    return render_template("analog.html")
+
+
 # ---------------------------------------------------------------------------
 # API: mata kuliah
 # ---------------------------------------------------------------------------
