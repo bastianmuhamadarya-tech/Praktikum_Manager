@@ -107,9 +107,14 @@ function toggleDarkMode() {
 }
 
 function highlightActiveNav() {
-    if (PAGE !== 'tools') return;
-    const tab = new URLSearchParams(location.search).get('tab') === 'appendix' ? 'appendix' : 'calculator';
-    const el = document.getElementById('nav-' + tab);
+    let id = null;
+    if (PAGE === 'tools') {
+        const tab = new URLSearchParams(location.search).get('tab') === 'appendix' ? 'appendix' : 'calculator';
+        id = 'nav-' + tab;
+    } else if (PAGE === 'analog') {
+        id = 'nav-analog';
+    }
+    const el = id ? document.getElementById(id) : null;
     if (el) {
         el.classList.add('bg-brand-50', 'text-brand-600', 'dark:bg-slate-700/50', 'dark:text-brand-400');
     }
@@ -212,7 +217,10 @@ async function resetAllData() {
     const data = await api('POST', '/api/reset');
     if (!data) return;
 
-    try { localStorage.removeItem('lab_manager_appendix'); } catch (e) {}
+    try {
+        localStorage.removeItem('lab_manager_appendix');
+        localStorage.removeItem('lab_manager_appendix_analog');
+    } catch (e) {}
     location.href = '/';
 }
 
